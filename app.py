@@ -1,17 +1,25 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
-from models import Customer, Lead
+from models import db, Customer, Lead
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-change-this'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///crm.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db.init_app(app)
 
 def init_sample_data():
-    Customer.add_customer('John Doe', 'john@example.com', 'Acme Corp', '555-0001', 'active')
-    Customer.add_customer('Jane Smith', 'jane@example.com', 'Tech Solutions', '555-0002', 'prospect')
-    Customer.add_customer('Bob Wilson', 'bob@example.com', 'Global Industries', '555-0003', 'inactive')
-    Lead.add_lead('Alice Brown', 'alice@example.com', 'StartUp Inc', 50000, 'Website')
-    Lead.add_lead('Charlie Davis', 'charlie@example.com', 'Enterprise Ltd', 100000, 'Referral')
+    if Customer.query.count() == 0:
+        Customer.add_customer('John Doe', 'john@example.com', 'Acme Corp', '555-0001', 'active')
+        Customer.add_customer('Jane Smith', 'jane@example.com', 'Tech Solutions', '555-0002', 'prospect')
+        Customer.add_customer('Bob Wilson', 'bob@example.com', 'Global Industries', '555-0003', 'inactive')
+    if Lead.query.count() == 0:
+        Lead.add_lead('Alice Brown', 'alice@example.com', 'StartUp Inc', 50000, 'Website')
+        Lead.add_lead('Charlie Davis', 'charlie@example.com', 'Enterprise Ltd', 100000, 'Referral')
 
-init_sample_data()
+with app.app_context():
+    db.create_all()
+    init_sample_data()
 
 @app.route('/')
 def index():
@@ -57,7 +65,7 @@ def edit_customer(customer_id):
         return redirect(url_for('customers'))
 
     if request.method == 'POST':
-        Customer.update_customer(customer_id, request.form.get('name'), request.form.get('email'), 
+        Customer.update_customer(customer_id, request.form.get('name'), request.form.get('email'),
                                 request.form.get('company'), request.form.get('phone'), request.form.get('status'))
         flash('Customer updated successfully!', 'success')
         return redirect(url_for('customer_detail', customer_id=customer_id))
